@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>JOYALUKKAS</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --brand:#a40000;
+      --light:#fff;
+      --chip:#ffffff22;
+      --chip-hover:#ffffff33;
+      --chip-active:#ffffff55;
+      --medium-icon: 32px;
+    }
+    body { font-family: Arial, sans-serif; margin: 0; color: #000; background-color: var(--brand); }
+    h1 { text-align: center; color: white; margin: 14px 0 2px; font-size: 36px; }
+    h2 { text-align: center; color: #fff; margin: 4px 0 0; font-size: 18px; }
+    /* ===== TOP FIXED AREA ===== */
+    .top-fixed {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 5;
+      background: var(--brand);
+      box-shadow: 0 2px 0 rgba(0,0,0,0.1);
+    }
+    .counts-wrap {
+      display: flex; gap: 8px; align-items: center; justify-content: center;
+      flex-wrap: wrap; padding: 10px 12px 6px;
+    }
+    .stock-chip {
+      color: #fff; border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 999px; padding: 4px 10px; cursor: pointer;
+      user-select: none; background: var(--chip); transition: background .15s, transform .05s, border .15s;
+      font-size: 13px;
+    }
+    .stock-chip:hover { background: var(--chip-hover); }
+    .stock-chip.active { background: var(--chip-active); border-color:#fff; font-weight: bold; }
+    /* Update the search box styles */
+    .search-box {
+      padding: 8px 0 10px;
+      text-align: center;
+    }
+    /* New flex container for search input and counts */
+    .search-flex-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 320px;
+      max-width: 92vw;
+      margin: 0 auto;
+    }
+    .search-box input {
+      flex-grow: 1;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+    }
+    /* New styles for the summary counts */
+    .summary-counts {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .summary-counts span {
+      white-space: nowrap;
+    }
+    .result-found {
+      color: #008000;
+    }
+    .result-not-found {
+      color: #a40000;
+    }
+    .section-title { text-align:center; color:#fff; font-weight:bold; padding: 6px 0 8px; }
+    /* Menu Styles */
+    .dropdown {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 6;
+    }
+    .dropbtn {
+        background-color: transparent;
+        color: white;
+        padding: 10px 15px;
+        font-size: 16px;
+        border: 1px solid white;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .dropbtn:hover, .dropbtn:focus {
+        background-color: #ffffff22;
+    }
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        right: 0;
+        background-color: #f9f9f9;
+        min-width: 160px;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        z-index: 1;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    .dropdown-content a {
+        color: black;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+        transition: background-color 0.2s;
+    }
+    .dropdown-content a:hover {
+        background-color: #ddd;
+    }
+    .dropdown.active .dropdown-content {
+        display: block;
+    }
+    .dropdown-content i {
+        margin-right: 8px;
+        color: var(--brand);
+    }
+    .logout-box { position: fixed; top: 10px; left: 20px; color: white; font-size: 14px; z-index:6; }
+    .logout-box button { margin-top: 8px; padding: 6px 12px; font-size: 14px; background-color: var(--brand); color: white; border: 1px solid #fff; border-radius: 4px; cursor: pointer; }
+    .logout-box button:hover { background-color: #8c0000; }
+    .warning { text-align:center; color: yellow; font-weight: bold; min-height: 20px; padding-top: 4px; }
+    /* ===== SCROLL AREA ===== */
+    .table-wrap {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      top: 210px;
+      background: rgba(255,255,255,0.05);
+      overflow: auto; padding: 0 0 18px;
+    }
+    table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.97); }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: center; vertical-align: middle; }
+    thead th { position: sticky; top: 0; background: #fff; z-index: 2; }
+    footer { text-align: center; color: #fff; font-weight: bold; padding: 12px 0; }
+    /* ===== MODALS ===== */
+    .modal { display: none; position: fixed; z-index: 9998; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); padding-top: 60px; }
+    .modal-content { background: #fff; margin: auto; padding: 20px; border-radius: 10px; width: 400px; max-height: 80vh; overflow-y: auto; box-shadow: 0 6px 30px rgba(0,0,0,0.5); }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; }
+    .modal h3 { margin: 0; }
+    .close { font-size: 26px; cursor: pointer; color: #333; }
+    .form-row { margin-bottom: 8px; }
+    .form-row input, .form-row textarea { width: 100%; box-sizing: border-box; padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+    .form-row label { display: block; margin-bottom: 4px; }
+    ul.barcode-list { list-style: none; padding: 0; margin: 0; }
+    ul.barcode-list li { padding: 4px 0; border-bottom: 1px solid #ddd; font-size: 14px; }
+    .mini { font-size: 12px; color:#666; }
+    .pill { display:inline-block; padding:2px 6px; border:1px solid #ddd; border-radius:12px; margin:2px; font-size:12px; }
+    /* --- NEW HISTORY MODAL STYLES --- */
+    .history-entry { border-bottom: 1px solid #eee; padding: 8px 4px; }
+    .history-entry:last-child { border-bottom: none; }
+    .history-header { font-weight: bold; font-size: 14px; }
+    .history-details { font-size: 12px; color: #555; margin-top: 4px; }
+    .history-barcodes { background: #f9f9f9; border-radius: 4px; padding: 4px 6px; margin-top: 4px; max-height: 100px; overflow-y: auto; }
+    .status-add { color: #008000; }
+    .status-import { color: #0000d0; }
+    .status-transfer { color: #8a2be2; }
+    .status-sold { color: #ff8c00; }
+    /* History navigation */
+    .history-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
+    }
+    .history-nav button {
+      background: none; border: 1px solid #ccc; padding: 6px 10px;
+      cursor: pointer; font-size: 12px;
+    }
+  </style>
+  <style id="print-style">
+    @media print {
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      #print-area {
+        position: absolute; left: 0; top: 0;
+        width: 100%; font-family: monospace;
+        line-height: 1.2;
+        padding: 10px;
+        box-sizing: border-box;
+      }
+      #print-area h2 { text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-fixed">
+  <h1>JOYALUKKAS</h1>
+  <h2>Diamond Certificate Number</h2>
+
+  <div class="counts-wrap" id="stockCounts"></div>
+
+  <div class="search-box">
+    <div class="search-flex-container">
+      <input type="text" id="searchInput" placeholder="Search or enter barcode(s) — press Enter" />
+      <div id="summaryCounts" class="summary-counts"></div>
+      <span id="clearSearchBtn" style="cursor: pointer; font-size: 24px; color: white; display: none;">&times;</span>
+    </div>
+    <div class="warning" id="warningBox"></div>
+  </div>
+
+  <div class="section-title">Stock Items</div>
+</div>
+
+<div class="dropdown">
+    <button class="dropbtn">Menu</button>
+    <div class="dropdown-content">
+        <a href="#" id="historyBtn"><i class="fa-solid fa-clock-rotate-left"></i> History</a>
+        <a href="#" id="importBtn"><i class="fa-solid fa-file-import"></i> Import</a>
+        <a href="#" id="backupBtn"><i class="fa-solid fa-cloud-arrow-down"></i> Backup</a>
+        <a href="#" id="downloadBtn" style="display:none;"><i class="fa-solid fa-download"></i> Download</a>
+        <a href="#" id="openSheetBtn" style="display:block;" target="_blank"><i class="fa-brands fa-google-drive"></i> Open Sheet</a>
+        <a href="#" id="syncBtn"><i class="fa-solid fa-arrows-rotate"></i> Sync Stock</a>
+        <a href="#" id="loginOpenBtn"><i class="fa-solid fa-right-to-bracket"></i> Login</a>
+    </div>
+    <input type="file" id="importFile" accept=".xlsx" style="display: none" />
+</div>
+<div class="logout-box" id="userStatus"></div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Item Name</th>
+        <th>Barcode</th>
+        <th>Created Date</th>
+        <th>Image</th>
+      </tr>
+    </thead>
+    <tbody id="itemsTable"></tbody>
+  </table>
+  <footer>Joyalukkas - World's Favourite Jeweller</footer>
+</div>
+
+<div id="addModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Add New Item(s)</h3>
+      <span class="close" id="modalClose">&times;</span>
+    </div>
+    <div id="modalInfo" style="margin-bottom:10px; font-weight:bold;"></div>
+    <ul id="barcodeList" class="barcode-list"></ul>
+    <div class="form-row">
+      <button id="modalSaveBtn">Save All</button>
+    </div>
+  </div>
+</div>
+
+<div id="loginModal" class="modal login-modal" aria-hidden="true">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Sign in</h3>
+      <span class="close" id="loginClose">&times;</span>
+    </div>
+    <div>
+      <div class="form-row">
+        <label for="username">Username</label>
+        <input id="username" type="text" placeholder="Username" autocomplete="off" />
+      </div>
+      <div class="form-row">
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Password" />
+      </div>
+      <div style="display:flex; gap:8px; justify-content:space-between; margin-top:8px;">
+        <button id="loginBtn">Login</button>
+        <button id="loginCancelBtn" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="syncModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Sync Stock</h3>
+      <span class="close" id="syncClose">&times;</span>
+    </div>
+    <div>
+      <label for="syncInput">Paste current stock barcodes (space-separated)</label>
+      <textarea id="syncInput" placeholder="e.g. DB123 DR456 DM789" style="width:100%; height:100px; padding: 8px; font-size: 14px; border-radius: 6px; border: 1px solid #ccc;"></textarea>
+      <div id="syncSummary" class="mini" style="margin:6px 0;"></div>
+      <div id="syncResults" style="max-height:220px; overflow:auto; border:1px solid #eee; border-radius:6px; padding:6px; margin-top:8px;">
+        <div class="mini">Please paste barcodes and press Process.</div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button id="syncProcessBtn">Process</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="historyModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Action History</h3>
+      <span class="close" id="historyClose">&times;</span>
+    </div>
+    <div class="history-nav">
+      <button id="prevMonthBtn">Previous Month</button>
+      <span id="currentMonthDisplay" style="font-weight: bold;"></span>
+      <button id="nextMonthBtn">Next Month</button>
+    </div>
+    <div id="historyList" style="max-height: 50vh; overflow-y: auto;">
+      </div>
+  </div>
+</div>
+<div id="print-area" style="display:none;"></div>
+
+<script>
+  // ** IMPORTANT: Your updated Google Apps Script Web App URL **
+  const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzUQC6wPWCiiadbYrOdAHxZQm5a_xpvDaqE9XS5TmTTYhGvAzrVlziX-3joSSN6em5pag/exec";
+  // ** NEW: URL to open the Google Sheet (the one you see in your browser) **
+  const GOOGLE_SHEET_VIEW_URL = "https://docs.google.com/spreadsheets/d/1gLzLYxikDO3DsOSiTZ1WOuShRT0or_K2NWhiNLb-FyE/edit?usp=sharing";
+  // ** NEW: URL to download the Google Sheet as an Excel file **
+  // You must get this link by going to your Google Sheet, clicking "File" -> "Download" -> "Microsoft Excel (.xlsx)" and copying the URL.
+  const GOOGLE_SHEET_DOWNLOAD_URL = "YOUR_GOOGLE_SHEET_DOWNLOAD_URL_HERE";
+  
+  let items = JSON.parse(localStorage.getItem('items')) || [];
+  let history = JSON.parse(localStorage.getItem('itemHistory')) || [];
+  let isLoggedIn = false;
+  let isAdmin = false;
+  let pendingAction = null;
+  let pendingBarcodes = [];
+  let newAddedStock = []; 
+  let currentFilter = 'ALL';
+  let currentHistoryDate = new Date();
+  
+  const CODES = ["DB","DE","DG","DM","DN","DO","DP","DR"];
+
+  const dropdown = document.querySelector('.dropdown');
+  dropdown.querySelector('.dropbtn').onclick = () => {
+      dropdown.classList.toggle('active');
+  };
+  document.addEventListener('click', function(event) {
+      if (!dropdown.contains(event.target)) {
+          dropdown.classList.remove('active');
+      }
+  });
+
+
+  const searchInput = document.getElementById('searchInput');
+  const itemsTable = document.getElementById('itemsTable');
+  const warningBox = document.getElementById('warningBox');
+  const stockCounts = document.getElementById('stockCounts');
+  const userStatus = document.getElementById('userStatus');
+  const backupBtn = document.getElementById('backupBtn');
+  const syncBtn = document.getElementById('syncBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const openSheetBtn = document.getElementById('openSheetBtn');
+  const loginOpenBtn = document.getElementById('loginOpenBtn');
+  const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+  const loginModal = document.getElementById('loginModal');
+  const loginClose = document.getElementById('loginClose');
+  const loginCancelBtn = document.getElementById('loginCancelBtn');
+  const usernameInput = document.getElementById('username');
+  const passwordInput = document.getElementById('password');
+  const loginBtn = document.getElementById('loginBtn');
+
+  const addModal = document.getElementById('addModal');
+  const modalClose = document.getElementById('modalClose');
+  const modalSaveBtn = document.getElementById('modalSaveBtn');
+  const barcodeList = document.getElementById('barcodeList');
+  const modalInfo = document.getElementById('modalInfo');
+
+  const importBtn = document.getElementById('importBtn');
+  const importFile = document.getElementById('importFile');
+
+  const historyModal = document.getElementById('historyModal');
+  const historyBtn = document.getElementById('historyBtn');
+  const historyClose = document.getElementById('historyClose');
+  const historyList = document.getElementById('historyList');
+  const prevMonthBtn = document.getElementById('prevMonthBtn');
+  const nextMonthBtn = document.getElementById('nextMonthBtn');
+  const currentMonthDisplay = document.getElementById('currentMonthDisplay');
+
+
+  const syncModal = document.getElementById('syncModal');
+  const syncClose = document.getElementById('syncClose');
+  const syncInput = document.getElementById('syncInput');
+  const syncSummary = document.getElementById('syncSummary');
+  const syncResults = document.getElementById('syncResults');
+  const syncProcessBtn = document.getElementById('syncProcessBtn');
+
+  const summaryCounts = document.getElementById('summaryCounts');
+
+  // --- Event Listeners for new menu items ---
+  document.getElementById('historyBtn').onclick = () => openHistoryModal();
+  document.getElementById('importBtn').onclick = () => requireLoginThen('import');
+  document.getElementById('backupBtn').onclick = () => requireLoginThen('backup');
+  document.getElementById('syncBtn').onclick = () => requireLoginThen('sync');
+  document.getElementById('downloadBtn').onclick = () => requireLoginThen('download');
+  document.getElementById('openSheetBtn').onclick = (event) => {
+    event.preventDefault(); // This is the important change
+    window.open(GOOGLE_SHEET_VIEW_URL, '_blank');
+  };
+  document.getElementById('loginOpenBtn').onclick = () => openLoginModal();
+  
+  // NEW: Add a general keydown listener for Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (addModal.style.display === 'block') { addModal.style.display = 'none'; }
+      if (loginModal.style.display === 'block') { loginModal.style.display = 'none'; }
+      if (syncModal.style.display === 'block') { syncModal.style.display = 'none'; }
+      if (historyModal.style.display === 'block') { historyModal.style.display = 'none'; }
+    }
+  });
+
+
+  // ** MODIFIED saveData to include automatic Google Sheet backup **
+  function saveData() {
+    localStorage.setItem('items', JSON.stringify(items));
+    // Trigger full stock backup to Google Sheet on any local save
+    backupToGoogleSheet(); 
+  }
+
+  function saveHistory() {
+    localStorage.setItem('itemHistory', JSON.stringify(history));
+  }
+  
+  function logHistory(type, barcodes, details = {}) {
+    if (!barcodes || barcodes.length === 0) return;
+    const entry = {
+      type: type,
+      barcodes: barcodes,
+      count: barcodes.length,
+      timestamp: new Date().toISOString(),
+      ...details
+    };
+    history.unshift(entry);
+    saveHistory();
+  }
+
+  function getNextAvailableId() {
+    const usedIds = new Set(items.map(i => i.id));
+    let id = 1;
+    while (usedIds.has(id)) {
+        id++;
+    }
+    return id;
+  }
+
+  function detectName(barcode) {
+    const code = String(barcode || '').toUpperCase();
+    return CODES.find(c => code.includes(c)) || 'UNKN';
+  }
+
+  function renderItems(baseItems = null) {
+    const source = baseItems || items;
+    const filtered = (currentFilter === 'ALL') ? source : source.filter(i => i.name === currentFilter);
+    itemsTable.innerHTML = '';
+
+    if (!filtered.length) {
+      itemsTable.innerHTML = '<tr><td colspan="5">No items found.</td></tr>';
+      updateCounts();
+      return;
+    }
+
+    filtered.slice(-200).reverse().forEach(item => {
+      const remoteUrl = `http://10.2.0.4/Views/ImageViewer.aspx?ItemCode=${encodeURIComponent(item.barcode)}`;
+      const safeThumb = remoteUrl.replace(/'/g, "\\'");
+      const tr = document.createElement('tr');
+
+      tr.innerHTML = `
+        <td>${item.id}</td>
+        <td>${item.name}</td>
+        <td>${item.barcode}</td>
+        <td>${item.createdAt || 'N/A'}</td>
+        <td style="text-align:center"><a href="${safeThumb}" target="_blank">Link</a></td>
+      `;
+      itemsTable.appendChild(tr);
+    });
+
+    updateCounts();
+  }
+
+  function updateCounts() {
+    const total = items.length;
+    const html = [];
+    html.push(`<span class="stock-chip ${currentFilter==='ALL' ? 'active' : ''}" data-filter="ALL">All: ${total}</span>`);
+    CODES.forEach(code => {
+      const cnt = items.filter(i => i.name === code).length;
+      html.push(`<span class="stock-chip ${currentFilter===code ? 'active' : ''}" data-filter="${code}">${code}: ${cnt}</span>`);
+    });
+    stockCounts.innerHTML = html.join('');
+    stockCounts.querySelectorAll('.stock-chip').forEach(el => {
+      el.onclick = () => {
+        currentFilter = el.getAttribute('data-filter');
+        renderItems();
+      };
+    });
+  }
+  
+  function showWarning(msg, time = 2500) {
+    warningBox.innerText = msg;
+    if (time > 0) setTimeout(() => (warningBox.innerText=''), time);
+  }
+
+  // Updated instantSearch function to filter the table immediately
+  function instantSearch(query) {
+      const q = query.trim().toLowerCase();
+      summaryCounts.innerHTML = '';
+
+      if (!q) {
+          renderItems(); // Show all items when query is empty
+          return;
+      }
+
+      const tokens = q.split(/\s+/).filter(Boolean);
+      const filteredItems = items.filter(item =>
+        tokens.some(token => item.barcode.toLowerCase().includes(token.toLowerCase()))
+      );
+      renderItems(filteredItems);
+  }
+
+  searchInput.addEventListener('input', () => {
+    instantSearch(searchInput.value);
+    clearSearchBtn.style.display = searchInput.value.length > 0 ? 'block' : 'none';
+  });
+
+  clearSearchBtn.onclick = () => {
+      searchInput.value = '';
+      renderItems();
+      clearSearchBtn.style.display = 'none';
+      summaryCounts.innerHTML = '';
+  };
+  
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const q = searchInput.value.trim();
+      if (!q) return;
+
+      const tokens = q.split(/\s+/).map(s => s.trim()).filter(Boolean);
+      const found = items.filter(i =>
+        tokens.some(t => i.barcode.toLowerCase().includes(t.toLowerCase()))
+      );
+
+      // Check if all items are found
+      if (found.length === tokens.length) {
+        // If all found, display the results
+        renderItems(found);
+        summaryCounts.innerHTML = '';
+      } else {
+        // If some items are not found, check if the user is an admin
+        if (isAdmin) {
+          // Only if admin, prompt to add new items
+          requireLoginThen('add', tokens);
+        } else {
+          // For regular users, just show a warning
+          showWarning('Item(s) not found in stock.');
+        }
+      }
+      searchInput.focus(); // Keep the cursor in the search box after Enter
+    } else if (e.key === 'Escape') {
+      // Handle the Escape key to clear the search input
+      searchInput.value = '';
+      summaryCounts.innerHTML = '';
+      renderItems(); // This line ensures all items are shown after clearing
+      searchInput.focus();
+    }
+  });
+
+  modalClose.onclick = () => { addModal.style.display = 'none'; };
+
+  // ** MODIFIED modalSaveBtn.addEventListener to include real-time feedback **
+  modalSaveBtn.addEventListener('click', async () => {
+    if (!pendingBarcodes.length) { showWarning('No barcodes to add'); return; }
+    let addedCount = 0, skippedCount = 0;
+    const addedBarcodes = [];
+    newAddedStock = []; 
+
+    for (const item of pendingBarcodes) {
+      const b = String(item.barcode).trim();
+      if (!b) continue;
+      if (items.some(x => String(x.barcode).toLowerCase() === b.toLowerCase())) { skippedCount++; continue; }
+      
+      const newItem = {
+        id: getNextAvailableId(),
+        name: detectName(b),
+        barcode: b,
+        createdAt: new Date().toISOString().slice(0, 10),
+        weight: '',
+        price: '',
+        imageDataUrl: ''
+      };
+
+      // Display real-time feedback before saving online
+      showWarning(`Saving item ${b} to online database...`, 0);
+      try {
+        await saveToGoogleSheet(newItem);
+        console.log(`Successfully saved ${newItem.barcode} online.`);
+        showWarning(`Item ${b} saved online.`, 2000); // Display success message
+      } catch (error) {
+        console.error(`Failed to save ${newItem.barcode} online:`, error);
+        showWarning(`Failed to save ${newItem.barcode} online. Check internet/URL.`, 5000); // Display failure message
+      }
+      
+      items.push(newItem);
+      addedCount++;
+      addedBarcodes.push(b);
+      newAddedStock.push(newItem); 
+    }
+    
+    logHistory('add', addedBarcodes);
+    saveData(); // Calls saveData, which now triggers backupToGoogleSheet()
+    renderItems();
+    addModal.style.display = 'none';
+    searchInput.value = '';
+    pendingBarcodes = [];
+    if (newAddedStock.length > 0) {
+        printNewStock();
+    }
+  });
+
+
+  // ** ORIGINAL FUNCTION to send single item data to the Google Sheet web app **
+  async function saveToGoogleSheet(item) {
+    if (GOOGLE_SHEET_URL === "YOUR_APPS_SCRIPT_WEB_APP_URL") {
+      throw new Error("Apps Script URL is not set. Please update the GOOGLE_SHEET_URL variable.");
+    }
+    
+    const response = await fetch(GOOGLE_SHEET_URL, {
+      method: "POST",
+      mode: "no-cors",
+      cache: "no-cache",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(item)
+    });
+    
+    if (!response.ok) {
+        console.log("No-cors response received. Data sent, but cannot confirm success.");
+    }
+  }
+
+  // ** NEW FUNCTION to send the ENTIRE stock to the Google Sheet web app for backup **
+  async function backupToGoogleSheet() {
+      if (GOOGLE_SHEET_URL === "YOUR_APPS_SCRIPT_WEB_APP_URL") {
+        console.error("Apps Script URL is not set for backup.");
+        return;
+      }
+      
+      const backupData = {
+        action: "backup", 
+        stock: items      // The entire stock array
+      };
+
+      try {
+        showWarning('Uploading full stock backup...', 0);
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: "POST",
+          mode: "no-cors",
+          cache: "no-cache",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(backupData)
+        });
+        showWarning('Full stock backup sent successfully.', 3000);
+      } catch (error) {
+        console.error('Failed to send full stock backup:', error);
+        showWarning('Failed to send backup. Check URL/connection.', 5000);
+      }
+  }
+
+  // ** NEW FUNCTION: To send an array of sold items to Google Sheet **
+  async function saveSoldToGoogleSheet(soldItems) {
+      if (GOOGLE_SHEET_URL === "YOUR_APPS_SCRIPT_WEB_APP_URL") {
+        console.error("Apps Script URL is not set for backup.");
+        return;
+      }
+      
+      const soldData = {
+        action: "sold", 
+        soldItems: soldItems      // The array of sold items
+      };
+      
+      try {
+        showWarning('Uploading sold items...', 0);
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: "POST",
+          mode: "no-cors",
+          cache: "no-cache",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(soldData)
+        });
+        showWarning('Sold items uploaded successfully.', 3000);
+      } catch (error) {
+        console.error('Failed to upload sold items:', error);
+        showWarning('Failed to upload sold items. Check URL/connection.', 5000);
+      }
+  }
+
+  function openAddModal(barcodes) {
+    pendingBarcodes = Array.isArray(barcodes) ? barcodes : [barcodes];
+    pendingBarcodes = pendingBarcodes.map(b => ({ barcode: String(b).trim() })).filter(b => b.barcode);
+    barcodeList.innerHTML = '';
+    pendingBarcodes.forEach(b => {
+      const li = document.createElement('li');
+      li.textContent = `${b.barcode} (${detectName(b.barcode)})`;
+      barcodeList.appendChild(li);
+    });
+    modalInfo.textContent = `You are adding ${pendingBarcodes.length} item(s)`;
+    addModal.style.display = 'block';
+  }
+
+  function openLoginModal(action, payload) { pendingAction = { action, payload }; loginModal.style.display = 'block'; }
+  function closeLoginModal() { loginModal.style.display = 'none'; usernameInput.value=''; passwordInput.value=''; }
+
+  loginOpenBtn.onclick = () => openLoginModal(null, null);
+  loginClose.onclick = closeLoginModal;
+  loginCancelBtn.onclick = () => { pendingAction = null; closeLoginModal(); };
+
+  function requireLoginThen(action, payload) {
+    if (action === 'add') {
+      if (!confirm('Item(s) not found. Do you want to add them?')) return;
+    }
+    if (isLoggedIn) {
+      continuePending({ action, payload });
+    } else {
+      openLoginModal(action, payload);
+    }
+  }
+
+  function continuePending(obj) {
+    const { action, payload } = obj || pendingAction || {};
+    if (!action) return closeLoginModal();
+    if (action === 'add') openAddModal(payload);
+    else if (action === 'import') importFile.click();
+    else if (action === 'sync') openSyncModal();
+    else if (action === 'download') window.open(GOOGLE_SHEET_DOWNLOAD_URL, '_blank');
+    else if (action === 'open_sheet') window.open(GOOGLE_SHEET_VIEW_URL, '_blank');
+    else if (action === 'backup') doBackup();
+    pendingAction = null;
+  }
+
+  loginBtn.onclick = () => {
+    if (usernameInput.value === 'admin' && passwordInput.value === 'joyalukkas@916*') {
+      isLoggedIn = true;
+      isAdmin = true;
+      closeLoginModal();
+      userStatus.innerHTML = `Logged in as: admin<br><button onclick="logout()">Logout</button>`;
+      downloadBtn.style.display = 'block';
+      showWarning('Login successful', 1500);
+      continuePending();
+      renderItems(); 
+      doAutoBackup();
+    } else {
+      isLoggedIn = true; 
+      isAdmin = false;
+      closeLoginModal();
+      userStatus.innerHTML = `Logged in as: ${usernameInput.value}<br><button onclick="logout()">Logout</button>`;
+      downloadBtn.style.display = 'none';
+      showWarning('Login successful', 1500);
+      continuePending();
+      renderItems(); 
+      doAutoBackup();
+    }
+  };
+  function logout() { 
+      isLoggedIn = false; 
+      isAdmin = false; 
+      userStatus.innerHTML = ''; 
+      downloadBtn.style.display = 'none';
+      showWarning('Logged out'); 
+      renderItems(); 
+  }
+  
+  passwordInput.addEventListener('keyup', e => {
+      if (e.key === 'Enter') {
+          loginBtn.click();
+      }
+  });
+
+  function doBackup() {
+    if (!isLoggedIn) return showWarning('Sign in to backup.');
+    
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["ID","Item Name","Barcode","Created Date","Weight","Price"],
+      ...items.map(it => [it.id, it.name, it.barcode, it.createdAt, "", ""])
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Stock");
+    
+    const date = new Date().toISOString().slice(0, 10);
+    const fileName = `joyalukkas_backup_${date}.xlsx`;
+    
+    XLSX.writeFile(wb, fileName, { bookType: "xlsx", compression: true });
+    showWarning(`Local backup created: ${fileName}`, 3000);
+  }
+
+  function doAutoBackup() {
+    const lastBackupDate = localStorage.getItem('lastBackupDate');
+    const today = new Date().toISOString().slice(0, 10);
+    if (lastBackupDate !== today && items.length > 0) {
+        doBackup(); // Performs the local Excel backup
+        localStorage.setItem('lastBackupDate', today);
+    }
+  }
+
+  function openSyncModal() {
+    syncModal.style.display = 'block';
+    syncInput.value = '';
+    syncSummary.textContent = '';
+    syncResults.innerHTML = '<div class="mini">Please paste barcodes and press Process.</div>';
+    syncProcessBtn.style.display = 'block'; 
+  }
+
+  syncClose.onclick = () => { syncModal.style.display = 'none'; };
+
+  importFile.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) {
+      showWarning('No file selected.', 2500);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+        
+        // Find the index of the 'Created Date' column
+        const headers = rows[0];
+        const dateColumnIndex = headers.indexOf('Created Date');
+
+        const importedItems = rows.slice(1).map(row => {
+          const createdAtValue = row[dateColumnIndex];
+          let formattedDate = createdAtValue;
+
+          // Check if the value is a number (Excel serial date) and convert it
+          if (typeof createdAtValue === 'number') {
+            const date = XLSX.SSF.parse_date_code(createdAtValue);
+            formattedDate = `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+          }
+
+          return {
+            id: row[0],
+            name: row[1],
+            barcode: String(row[2]).trim(),
+            createdAt: formattedDate,
+            weight: row[4],
+            price: row[5],
+          };
+        }).filter(item => item.barcode);
+
+        items = importedItems;
+        logHistory('import', items.map(i => i.barcode), { message: 'Full stock replacement via import.' });
+        saveData(); // Calls saveData, which now triggers backupToGoogleSheet()
+        renderItems();
+        showWarning(`Successfully imported ${items.length} items. Stock has been fully replaced.`, 5000);
+        
+      } catch (err) {
+        console.error(err);
+        showWarning('Failed to import Excel file. Please check the format.', 3000);
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+
+  function openHistoryModal() {
+    currentHistoryDate = new Date();
+    renderHistory();
+    historyModal.style.display = 'block';
+  }
+
+  function renderHistory() {
+    const year = currentHistoryDate.getFullYear();
+    const month = currentHistoryDate.getMonth();
+    currentMonthDisplay.textContent = currentHistoryDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+    
+    const filteredHistory = history.filter(entry => {
+      const entryDate = new Date(entry.timestamp);
+      return entryDate.getFullYear() === year && entryDate.getMonth() === month;
+    });
+
+    historyList.innerHTML = '';
+    if (filteredHistory.length === 0) {
+      historyList.innerHTML = '<div class="mini" style="text-align:center;">No history recorded for this month.</div>';
+    } else {
+      historyList.innerHTML = filteredHistory.map(entry => {
+        const date = new Date(entry.timestamp);
+        const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+        const actionText = {
+          'add': 'Added',
+          'import': 'Imported',
+          'import_sync': 'Import & Sync',
+          'transfer': 'Transferred',
+          'sold': 'Sold'
+        }[entry.type] || 'Action';
+        const actionClass = {
+          'add': 'status-add',
+          'import': 'status-import',
+          'import_sync': 'status-import',
+          'transfer': 'status-transfer',
+          'sold': 'status-sold'
+        }[entry.type] || '';
+
+        const typeCounts = {};
+        entry.barcodes.forEach(b => {
+          const type = detectName(b);
+          typeCounts[type] = (typeCounts[type] || 0) + 1;
+        });
+        const countDetails = Object.keys(typeCounts).map(type => `${type}: ${typeCounts[type]}`).join(', ');
+        
+        return `
+          <div class="history-entry">
+            <div class="history-header">
+              <span class="${actionClass}">${actionText} ${entry.count} item(s)</span>
+            </div>
+            <div class="history-details">
+              ${formattedDate}
+              <div class="mini" style="margin-top:2px;">(${countDetails})</div>
+            </div>
+            <div class="history-barcodes">
+              ${entry.barcodes.map(b => `<span class="pill">${b}</span>`).join(' ')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  prevMonthBtn.onclick = () => {
+    currentHistoryDate.setMonth(currentHistoryDate.getMonth() - 1);
+    renderHistory();
+  };
+
+  nextMonthBtn.onclick = () => {
+    currentHistoryDate.setMonth(currentHistoryDate.getMonth() + 1);
+    renderHistory();
+  };
+
+
+  historyBtn.onclick = openHistoryModal;
+  historyClose.onclick = () => { historyModal.style.display = 'none'; };
+  
+  function parseCodes(input) {
+    const raw = input.trim();
+    if (!raw) return [];
+    const codes = raw.split(/\s+/).map(s => s.trim()).filter(Boolean);
+    const seen = new Set(), deduped = [];
+    for (const c of codes) { const k = c.toLowerCase(); if (!seen.has(k)) { seen.add(k); deduped.push(c); } }
+    return deduped;
+  }
+
+  syncProcessBtn.onclick = async () => {
+    if (!isAdmin) { showWarning('Admin sign-in required to sync stock'); return; }
+    
+    const physicalStockBarcodes = parseCodes(syncInput.value);
+    if (physicalStockBarcodes.length === 0) {
+        showWarning('Please enter barcodes to sync.');
+        return;
+    }
+
+    const physicalStockCodesSet = new Set(physicalStockBarcodes.map(c => c.toLowerCase()));
+    
+    const soldItems = items.filter(i => 
+      !physicalStockCodesSet.has(i.barcode.toLowerCase())
+    );
+    const soldBarcodes = soldItems.map(i => i.barcode);
+
+    if (soldItems.length > 0) {
+        items = items.filter(i => !soldBarcodes.includes(i.barcode));
+        logHistory('sold', soldBarcodes);
+        // ** NEW: Send sold items to Google Apps Script **
+        await saveSoldToGoogleSheet(soldItems);
+    }
+    
+    const existingStockCodesSet = new Set(items.map(i => i.barcode.toLowerCase()));
+    const newBarcodes = physicalStockBarcodes.filter(c => 
+      !existingStockCodesSet.has(c.toLowerCase())
+    );
+
+    newAddedStock = []; 
+
+    if (newBarcodes.length > 0) {
+      for (const b of newBarcodes) {
+          const newItem = {
+              id: getNextAvailableId(),
+              name: detectName(b),
+              barcode: b,
+              createdAt: new Date().toISOString().slice(0, 10),
+              weight: '',
+              price: '',
+              imageDataUrl: ''
+          };
+          items.push(newItem);
+          newAddedStock.push(newItem);
+          try {
+            // ** Sends single new item to Google Sheet **
+            await saveToGoogleSheet(newItem);
+            console.log(`Successfully saved ${newItem.barcode} online.`);
+          } catch (error) {
+            console.error(`Failed to save ${newItem.barcode} online:`, error);
+          }
+      }
+      logHistory('add', newBarcodes);
+    }
+    
+    saveData(); // Calls saveData, which now triggers backupToGoogleSheet()
+    renderItems();
+    
+    syncSummary.textContent = `Sync Complete! Sold: ${soldBarcodes.length}, New: ${newBarcodes.length}`;
+    syncResults.innerHTML = '<div class="mini">Data has been updated.</div>';
+    syncProcessBtn.style.display = 'none';
+
+    if (newAddedStock.length > 0) {
+      printNewStock();
+    }
+  };
+  
+  function printNewStock() {
+    if (newAddedStock.length === 0) {
+        showWarning('No new stock to print.');
+        return;
+    }
+    
+    newAddedStock.sort((a, b) => a.id - b.id);
+
+    let printContent = `<h2>NEW STOCK ADDED</h2>`;
+    newAddedStock.forEach(item => {
+        printContent += `<p>ID: ${item.id}, Barcode: ${item.barcode}</p>`;
+    });
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Print</title>');
+    printWindow.document.write('<style>body { font-family: monospace; } h2 { text-align: center; } p { margin: 2px 0; }</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+  }
+
+  // ===== INIT =====
+  renderItems();
+  if (isLoggedIn) {
+      userStatus.innerHTML = `Logged in as: admin<br><button onclick="logout()">Logout</button>`;
+      if (isAdmin) {
+        downloadBtn.style.display = 'block';
+      }
+  }
+  
+  // New code to autofocus the search input on page load
+  window.addEventListener('load', () => {
+      searchInput.focus();
+  });
+</script>
+
+</body>
+</html>
